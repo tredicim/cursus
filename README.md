@@ -46,4 +46,9 @@ A Rust core shared by a desktop app (Tauri, TypeScript UI) and a CLI for scripti
 
 ## License
 
-To be decided.
+Licensed under either of
+
+- [Apache License, Version 2.0](LICENSE-APACHE)
+- [MIT license](LICENSE-MIT)
+
+at your option. You can pick either one.
