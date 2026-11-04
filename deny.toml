@@ -1,0 +1,29 @@
+# cargo-deny config. run `cargo deny check` locally, CI runs the same.
+[graph]
+all-features = true
+
+[advisories]
+version = 2
+unmaintained = "workspace"
+yanked = "deny"
+ignore = []
+
+[licenses]
+version = 2
+unused-allowed-license = "deny"
+allow = [
+    "MIT",
+    "Apache-2.0",
+    "Unicode-3.0",
+    "Unlicense",
+]
+confidence-threshold = 0.8
+
+[bans]
+multiple-versions = "warn"
+wildcards = "deny"
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
