@@ -6,7 +6,8 @@ A modular, local-first CV builder that renders to LaTeX. You keep all your
 experiences, projects, skills and education in one place, then pick exactly what
 goes into each CV, and which *framing* of it, for every application.
 
-**Status:** planning. Nothing to install yet. See [PLAN.md](PLAN.md).
+**Status:** early. The CLI skeleton exists, but no command does real work yet.
+See [PLAN.md](PLAN.md).
 
 ## The problem
 
@@ -43,6 +44,25 @@ reusable.
 ## Tech
 
 A Rust core shared by a desktop app (Tauri, TypeScript UI) and a CLI for scripting and agents. Details and open questions in [PLAN.md](PLAN.md).
+
+## CLI
+
+The Cargo workspace is in place, but every command is still a stub.
+
+```sh
+cargo run -p cursus-cli -- --help
+cargo run -p cursus-cli -- schema --json
+```
+
+Commands: `init`, `validate`, `list`, `build`, `schema`. Every command accepts
+`--json`; machine-readable output goes to stdout as one object:
+
+```json
+{"ok":false,"command":"validate","error":{"code":"not_implemented","message":"validate is not implemented yet"}}
+```
+
+Exit codes: `0` success, `1` invalid data, `2` usage error, `3` I/O error,
+`5` not implemented. The `1` and `3` paths land with the data model.
 
 ## License
 
