@@ -1,0 +1,18 @@
+[package]
+name = "cursus-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "The cursus command-line interface"
+
+[[bin]]
+name = "cursus"
+path = "src/main.rs"
+
+[dependencies]
+clap.workspace = true
+cursus-core = { path = "../core" }
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true

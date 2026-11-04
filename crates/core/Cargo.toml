@@ -1,0 +1,9 @@
+[package]
+name = "cursus-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Data model, validation and target resolution for Cursus"
+
+[dependencies]
