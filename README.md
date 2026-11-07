@@ -1,5 +1,7 @@
 # Cursus
 
+[![CI](https://github.com/tredicim/cursus/actions/workflows/ci.yml/badge.svg)](https://github.com/tredicim/cursus/actions/workflows/ci.yml)
+
 > Write your career once. Tailor it for every job.
 
 A modular, local-first CV builder that renders to LaTeX. You keep all your
