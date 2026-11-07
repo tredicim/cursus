@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/tredicim/cursus/security/policy
+    about: Please report security problems privately, not in a public issue.
+  - name: Read the README and the plan
+    url: https://github.com/tredicim/cursus/blob/main/README.md
+    about: Check what Cursus is meant to do and what is already planned.

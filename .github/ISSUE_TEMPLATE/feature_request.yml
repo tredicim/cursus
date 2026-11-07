@@ -1,0 +1,54 @@
+name: Feature request
+description: Suggest an improvement or a new capability.
+title: "feat: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the idea. Check [PLAN.md](https://github.com/tredicim/cursus/blob/main/PLAN.md)
+        first: the roadmap explains what is already planned and what is out of
+        scope.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What are you trying to do, and what gets in the way today?
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: Describe the behaviour or interface you would like.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Other approaches, workarounds, or existing tools that solve this.
+    validations:
+      required: false
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Which part of Cursus does this touch?
+      options:
+        - Core data model and validation
+        - CLI and JSON output
+        - LaTeX templates and PDF build
+        - Desktop app
+        - Agent integration
+        - Documentation
+        - CI, release and repository tooling
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Mockups, examples from other tools, or links to related issues.
+    validations:
+      required: false
