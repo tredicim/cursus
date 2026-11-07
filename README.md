@@ -66,6 +66,11 @@ Commands: `init`, `validate`, `list`, `build`, `schema`. Every command accepts
 Exit codes: `0` success, `1` invalid data, `2` usage error, `3` I/O error,
 `5` not implemented. The `1` and `3` paths land with the data model.
 
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, the check commands, commit
+conventions and the pull request flow.
+
 ## License
 
 Licensed under either of
