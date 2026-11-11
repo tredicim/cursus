@@ -1,0 +1,9 @@
+id: shared-entry
+kind: experience
+title: First version
+organization: Acme
+start: 2024-01
+variants:
+  default:
+    bullets:
+      - A bullet.

@@ -1,0 +1,9 @@
+id: languages
+kind: skill
+title: Languages
+tags: [skills]
+variants:
+  default:
+    bullets:
+      - Rust, Python, TypeScript, SQL
+      - English (fluent), Italian (native)

@@ -16,6 +16,7 @@ allow = [
     "Apache-2.0",
     "Unicode-3.0",
     "Unlicense",
+    "Zlib",
 ]
 confidence-threshold = 0.8
 

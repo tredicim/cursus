@@ -107,8 +107,8 @@ live. This keeps everything git-friendly and avoids a separate database.
 ## Milestones
 
 - **M0: Repo.** README, PLAN, license, CI skeleton.
-- **M1: Data.** Data model, YAML loading, `validate`, JSON Schema.
-- **M2: Render.** One LaTeX template, `build` to `.tex`, then PDF.
+- **M1: Data.** Data model, YAML loading, `validate`, JSON Schema. **Done.**
+- **M2: Render.** One LaTeX template, `build` to `.tex`, then PDF. **Done.**
 - **M3: Targets.** Selection and variants, ordering, `list`.
 - **M4: App.** Tauri shell, library and target builder screens, PDF preview.
 - **M5: Agents.** `AGENTS.md`, `--json` everywhere, example workflow.
@@ -118,9 +118,15 @@ live. This keeps everything git-friendly and avoids a separate database.
 
 ## Open questions
 
-- YAML or TOML for data files?
-- Bundle an engine such as Tectonic so the app works without a TeX install, or require a system LaTeX?
-- Templating engine: Tera, minijinja, or Handlebars?
+- ~~YAML or TOML for data files?~~ YAML, because entries are nested and benefit
+  from comments. See [docs/data-model.md](docs/data-model.md).
+- ~~Bundle an engine such as Tectonic or require a system LaTeX?~~ Prefer an
+  installed Tectonic, then `latexmk`/`pdflatex`; ship a bundle with the desktop
+  app later if setup friction is real. See
+  [docs/building.md](docs/building.md).
+- ~~Templating engine: Tera, minijinja, or Handlebars?~~ Plain `.tex` files with
+  two tokens and escaping in Rust, for determinism and auditable escaping. See
+  [docs/templates.md](docs/templates.md).
 - How to handle a profile photo and personal data safely (keep it out of git)?
 - How should "same entry, different framing" be diffed so it stays easy to review?
 

@@ -1,0 +1,10 @@
+id: bad-link
+kind: project
+title: Bad link
+links:
+  - label: Missing scheme
+    url: example.com/no-scheme
+variants:
+  default:
+    bullets:
+      - A bullet.
