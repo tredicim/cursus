@@ -295,9 +295,11 @@ pub(crate) fn is_valid_id(value: &str) -> bool {
 
 fn is_http_url(value: &str) -> bool {
     let value = value.trim();
-    (value.starts_with("http://") || value.starts_with("https://"))
-        && value.len() > "https://".len()
-        && !value.chars().any(char::is_whitespace)
+    let rest = value
+        .strip_prefix("https://")
+        .or_else(|| value.strip_prefix("http://"));
+
+    rest.is_some_and(|rest| !rest.is_empty() && !value.chars().any(char::is_whitespace))
 }
 
 fn validate_id(value: &str, file: &Path, field: &str, issues: &mut Vec<Issue>) {

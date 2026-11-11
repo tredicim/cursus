@@ -80,8 +80,8 @@ cargo install tectonic
 winget install tectonic  # or install MiKTeX/TeX Live
 ```
 
-The classic template only needs `geometry` and `hyperref`, both part of every
-standard distribution and the default Tectonic bundle.
+The classic template only needs `fontenc`, `geometry` and `hyperref`, all part
+of every standard distribution and the default Tectonic bundle.
 
 ## Failures
 
