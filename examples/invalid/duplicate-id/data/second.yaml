@@ -1,0 +1,7 @@
+id: shared-entry
+kind: project
+title: Second version
+variants:
+  default:
+    bullets:
+      - Another bullet.

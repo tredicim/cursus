@@ -1,0 +1,8 @@
+id: bad-date
+kind: experience
+title: Impossible month
+start: 2025-13
+variants:
+  default:
+    bullets:
+      - A bullet.

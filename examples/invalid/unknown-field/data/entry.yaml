@@ -1,0 +1,8 @@
+id: typo
+kind: project
+title: Unknown field
+variants:
+  default:
+    bullets:
+      - A bullet.
+    bulles: typo

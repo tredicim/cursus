@@ -1,0 +1,7 @@
+id: only-default
+kind: project
+title: Only one framing
+variants:
+  default:
+    bullets:
+      - A bullet.

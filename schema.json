@@ -1,0 +1,205 @@
+{
+  "$defs": {
+    "Entry": {
+      "additionalProperties": false,
+      "description": "One item in the career library.",
+      "properties": {
+        "end": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/YearMonth"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Omit for an ongoing entry."
+        },
+        "id": {
+          "description": "Stable identifier, unique across all entries.",
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/$defs/EntryKind"
+        },
+        "links": {
+          "items": {
+            "$ref": "#/$defs/Link"
+          },
+          "type": "array"
+        },
+        "location": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "organization": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "start": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/YearMonth"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "tags": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "title": {
+          "type": "string"
+        },
+        "variants": {
+          "additionalProperties": {
+            "$ref": "#/$defs/Variant"
+          },
+          "description": "Named framings, keyed by variant name. Must not be empty.",
+          "type": "object"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "title",
+        "variants"
+      ],
+      "type": "object"
+    },
+    "EntryKind": {
+      "description": "What an entry represents.\n\nAdding a kind means adding one variant here and a label below; validation\nand rendering pick the new kind up without another match.",
+      "enum": [
+        "experience",
+        "project",
+        "education",
+        "skill",
+        "award",
+        "certification",
+        "other"
+      ],
+      "type": "string"
+    },
+    "Link": {
+      "additionalProperties": false,
+      "description": "A link attached to an entry and shown by templates that support links.",
+      "properties": {
+        "label": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "label",
+        "url"
+      ],
+      "type": "object"
+    },
+    "Target": {
+      "additionalProperties": false,
+      "description": "One CV to build: the ordered selection of entries and the template.",
+      "properties": {
+        "include": {
+          "description": "Entries to include. Must not be empty.",
+          "items": {
+            "$ref": "#/$defs/TargetInclude"
+          },
+          "type": "array"
+        },
+        "name": {
+          "description": "Display name, also used as the document title.",
+          "type": "string"
+        },
+        "template": {
+          "$ref": "#/$defs/Template"
+        }
+      },
+      "required": [
+        "name",
+        "template",
+        "include"
+      ],
+      "type": "object"
+    },
+    "TargetInclude": {
+      "additionalProperties": false,
+      "description": "One entry and the variant to use for it.",
+      "properties": {
+        "id": {
+          "description": "ID of an entry in `data/`.",
+          "type": "string"
+        },
+        "variant": {
+          "default": "default",
+          "description": "Variant of that entry. Defaults to `default`.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "type": "object"
+    },
+    "Template": {
+      "description": "The LaTeX theme used to render a target.",
+      "oneOf": [
+        {
+          "const": "classic",
+          "description": "Clean, single-column, ATS-friendly layout.",
+          "type": "string"
+        }
+      ]
+    },
+    "Variant": {
+      "additionalProperties": false,
+      "description": "One framing of an entry, e.g. the same internship written for a backend role\nand for a data-science role.",
+      "properties": {
+        "bullets": {
+          "description": "The bullet points for this framing. At least one bullet or a summary is\nrequired by validation.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "summary": {
+          "description": "Optional prose paragraph shown before the bullets.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "YearMonth": {
+      "description": "A year and month in YYYY-MM format.",
+      "examples": [
+        "2025-06"
+      ],
+      "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])$",
+      "type": "string"
+    }
+  },
+  "$id": "https://github.com/tredicim/cursus/blob/main/schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "anyOf": [
+    {
+      "$ref": "#/$defs/Entry"
+    },
+    {
+      "$ref": "#/$defs/Target"
+    }
+  ],
+  "description": "Any top-level Cursus document.\n\nThis exists so `cursus schema` can publish one schema covering both file\ntypes. The loader still parses entries and targets separately, which keeps\nerror messages precise.",
+  "title": "Cursus document"
+}

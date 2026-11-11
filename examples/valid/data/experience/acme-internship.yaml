@@ -1,0 +1,21 @@
+id: acme-internship
+kind: experience
+title: Software Engineering Intern
+organization: Acme Corp
+location: Remote
+start: 2025-06
+end: 2025-09
+tags: [backend, python]
+links:
+  - label: Acme engineering blog
+    url: https://example.com/acme-engineering
+variants:
+  software-eng:
+    summary: Built and shipped backend services for the internal data platform.
+    bullets:
+      - Built a REST service handling 2k requests per second with Python and PostgreSQL.
+      - Cut p95 latency by 35% by adding caching and query indexes.
+  data-science:
+    summary: Analysed product usage data to prioritise platform work.
+    bullets:
+      - Built a ranking model that improved search relevance in offline evaluation.

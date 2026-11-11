@@ -1,0 +1,5 @@
+name: Missing entry
+template: classic
+include:
+  - id: ghost-entry
+    variant: default

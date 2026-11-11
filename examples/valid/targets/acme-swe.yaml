@@ -1,0 +1,13 @@
+name: Acme Software Engineering Internship
+template: classic
+include:
+  - id: acme-internship
+    variant: software-eng
+  - id: cursus
+    variant: default
+  - id: university
+    variant: default
+  - id: languages
+    variant: default
+  - id: hackathon-award
+    variant: default

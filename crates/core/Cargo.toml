@@ -7,3 +7,12 @@ repository.workspace = true
 description = "Data model, validation and target resolution for Cursus"
 
 [dependencies]
+schemars.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+serde_path_to_error.workspace = true
+thiserror.workspace = true
+yaml_serde.workspace = true
+
+[dev-dependencies]
+jsonschema = { version = "0.61", default-features = false }

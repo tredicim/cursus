@@ -1,0 +1,20 @@
+id: cursus
+kind: project
+title: 'Cursus: a CV builder for {LaTeX}'
+organization: Personal
+start: 2025-10
+tags: [rust, latex, cli]
+links:
+  - label: Source code
+    url: https://github.com/tredicim/cursus
+variants:
+  default:
+    summary: >-
+      A local-first CV builder that renders 100% deterministic LaTeX & PDFs
+      from structured YAML ($#_ ~ ^ \ are escaped, not broken).
+    bullets:
+      - Designed a Rust workspace with core, render and CLI crates.
+      - Added a JSON Schema so agents can validate edits before building.
+  data-science:
+    summary: >-
+      A data-driven CV builder with one source of truth and reusable variants.

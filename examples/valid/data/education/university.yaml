@@ -1,0 +1,12 @@
+id: university
+kind: education
+title: BSc in Computer Engineering
+organization: University of Bologna
+location: Bologna, Italy
+start: 2022-09
+end: 2025-07
+tags: [education]
+variants:
+  default:
+    bullets:
+      - Graduated with honours; thesis on distributed systems.
