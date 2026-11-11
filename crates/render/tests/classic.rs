@@ -45,7 +45,9 @@ fn classic_template_matches_the_golden_file() {
         return;
     }
 
-    let expected = fs::read_to_string(&golden).expect("read golden file");
+    let expected = fs::read_to_string(&golden)
+        .expect("read golden file")
+        .replace("\r\n", "\n");
     assert_eq!(
         rendered, expected,
         "rendered LaTeX changed; run `UPDATE_GOLDEN=1 cargo test -p cursus-render` to update the golden file"

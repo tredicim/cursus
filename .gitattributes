@@ -1,0 +1,5 @@
+# Keep text files LF on every platform so generated LaTeX and golden files
+# compare byte-for-byte in CI.
+* text=auto eol=lf
+
+*.png binary

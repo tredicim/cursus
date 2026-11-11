@@ -44,7 +44,10 @@ fn render_classic(target: &ResolvedTarget) -> String {
         }
     }
 
+    // A Windows checkout may give the template CRLF line endings. Normalize
+    // before substitution so the rendered document is identical everywhere.
     CLASSIC_TEMPLATE
+        .replace("\r\n", "\n")
         .replace("%%CURSUS_TITLE%%", &escape(&target.name))
         .replace("%%CURSUS_BODY%%", &body)
 }
