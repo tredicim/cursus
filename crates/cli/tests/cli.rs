@@ -1,3 +1,4 @@
+use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -165,4 +166,67 @@ fn build_requires_a_target() {
 
     assert_eq!(output.status.code(), Some(2));
     assert!(!output.stderr.is_empty());
+}
+
+#[test]
+fn build_reports_a_missing_target() {
+    let output = cursus()
+        .current_dir(fixture("valid"))
+        .args(["build", "does-not-exist", "--json"])
+        .output()
+        .expect("run cursus");
+
+    assert_eq!(output.status.code(), Some(1));
+    let value: Value = serde_json::from_slice(&output.stdout).expect("valid json");
+    assert_eq!(value["error"]["code"], "target_not_found");
+}
+
+#[test]
+fn build_refuses_invalid_data_before_touching_the_disk() {
+    let output = cursus()
+        .current_dir(fixture("invalid/duplicate-id"))
+        .args(["build", "acme-swe"])
+        .output()
+        .expect("run cursus");
+
+    assert_eq!(output.status.code(), Some(1));
+    let stderr = String::from_utf8(output.stderr).expect("utf-8 stderr");
+    assert!(stderr.contains("invalid data"));
+    assert!(!fixture("invalid/duplicate-id/output").exists());
+}
+
+#[test]
+fn build_writes_tex_and_pdf_when_a_latex_compiler_is_available() {
+    if !cursus_render::latex_available() {
+        eprintln!("skipping build test: no LaTeX compiler on PATH");
+        return;
+    }
+
+    let directory = tempfile::tempdir().expect("create temp directory");
+    let output = cursus()
+        .current_dir(fixture("valid"))
+        .args(["build", "acme-swe", "--output"])
+        .arg(directory.path())
+        .arg("--json")
+        .output()
+        .expect("run cursus");
+
+    assert!(
+        output.status.success(),
+        "build failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let value: Value = serde_json::from_slice(&output.stdout).expect("valid json");
+    assert_eq!(value["data"]["target"], "acme-swe");
+
+    let pdf = PathBuf::from(value["data"]["pdf"].as_str().expect("pdf path"));
+    let tex = PathBuf::from(value["data"]["tex"].as_str().expect("tex path"));
+    assert!(pdf.is_file(), "PDF was not written");
+    assert!(tex.is_file(), "TeX was not written");
+    assert!(fs::read(&pdf).expect("read PDF").starts_with(b"%PDF"));
+
+    let tex = fs::read_to_string(&tex).expect("read TeX");
+    assert!(tex.contains("\\documentclass"));
+    assert!(tex.contains("\\cvsection{Experience}"));
 }

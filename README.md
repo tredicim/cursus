@@ -8,7 +8,9 @@ A modular, local-first CV builder that renders to LaTeX. You keep all your
 experiences, projects, skills and education in one place, then pick exactly what
 goes into each CV, and which *framing* of it, for every application.
 
-**Status:** early. The CLI skeleton exists, but no command does real work yet.
+**Status:** early, but the first pipeline works. Entries and targets are YAML,
+`cursus validate` checks them, and `cursus build` renders the `classic` template
+to LaTeX and PDF. `init`, `list`, the desktop app and the ATS checker are next.
 See [PLAN.md](PLAN.md).
 
 ## The problem
@@ -36,12 +38,14 @@ reusable.
 
 ## Planned features
 
-- [ ] Data model and validation
-- [ ] Targets (selection of entries and variants)
-- [ ] LaTeX templates and PDF build
+- [x] Data model and validation
+- [x] Targets (selection of entries and variants)
+- [x] LaTeX templates and PDF build (`classic`)
 - [ ] Desktop app (library, target builder, live PDF preview)
 - [ ] Agent integration (schema, `AGENTS.md`, JSON output)
 - [ ] ATS-style checker (text extraction, structure, keyword coverage)
+
+![A CV rendered with the classic template](docs/assets/classic-example.png)
 
 ## Tech
 
@@ -49,22 +53,46 @@ A Rust core shared by a desktop app (Tauri, TypeScript UI) and a CLI for scripti
 
 ## CLI
 
-The Cargo workspace is in place, but every command is still a stub.
+`validate`, `build` and `schema` work. `init` and `list` still return
+`not_implemented`.
 
 ```sh
 cargo run -p cursus-cli -- --help
-cargo run -p cursus-cli -- schema --json
+
+cd examples/valid
+cargo run -p cursus-cli -- validate
+cargo run -p cursus-cli -- build acme-swe
 ```
 
-Commands: `init`, `validate`, `list`, `build`, `schema`. Every command accepts
-`--json`; machine-readable output goes to stdout as one object:
+`build` writes `output/<target>.tex` and `output/<target>.pdf`; use
+`--output <directory>` or `--output <file>.pdf` to choose another location.
+It needs Tectonic, `latexmk` or `pdflatex` on `PATH`; see
+[docs/building.md](docs/building.md).
+
+Every command accepts `--json`; machine-readable output goes to stdout as one
+object:
 
 ```json
-{"ok":false,"command":"validate","error":{"code":"not_implemented","message":"validate is not implemented yet"}}
+{"ok":true,"command":"validate","data":{"entries":5,"targets":1}}
 ```
 
-Exit codes: `0` success, `1` invalid data, `2` usage error, `3` I/O error,
-`5` not implemented. The `1` and `3` paths land with the data model.
+```json
+{"ok":false,"command":"build","error":{"code":"target_not_found","message":"target `nope` not found in targets/"}}
+```
+
+Exit codes: `0` success, `1` invalid data or unknown target, `2` usage error,
+`3` I/O error, `4` build failed, `5` not implemented.
+
+## Data and templates
+
+- [Data model](docs/data-model.md): YAML layout, fields, validation rules and
+  the JSON Schema.
+- [Building](docs/building.md): compiler choice, output paths, failures and
+  determinism.
+- [Templates](docs/templates.md): `classic` structure, escaping and how to add
+  a theme.
+- [`schema.json`](schema.json): generated schema for editors and agents.
+- [`examples/`](examples/): a complete project and one fixture per broken rule.
 
 ## Contributing
 

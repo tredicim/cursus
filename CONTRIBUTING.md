@@ -32,23 +32,25 @@ app can share the same logic.
 | `crates/core` | Data model, YAML loading, validation, target resolution. |
 | `crates/render` | LaTeX rendering, escaping and the PDF build pipeline. |
 | `crates/cli` | The `cursus` binary; integration tests live in `crates/cli/tests/`. |
-| `data/` | Your entries. Created by `cursus init` (planned, not in the repo yet). |
-| `targets/` | One file per CV target (planned, not in the repo yet). |
-| `examples/` | Example and fixture data used by tests (planned). |
-| `docs/` | Design notes, such as the data model and branch protection (planned). |
+| `data/` | Your entries. Created by `cursus init` (still planned). |
+| `targets/` | One file per CV target. |
+| `examples/` | A complete example project and one fixture per validation rule. |
+| `docs/` | Data model, build pipeline and template notes. |
+| `schema.json` | Generated JSON Schema for entries and targets. |
 | `.github/` | CI workflows, issue forms and the pull request template. |
 | `PLAN.md` | Goals, milestones, open questions and risks. |
 
-The CLI currently exposes the command surface but every command is still a
-stub. The data model and renderer land next; until then, keep changes aligned
-with the milestones in `PLAN.md`.
+`validate`, `build` and `schema` work. `init` and `list` are still stubs; keep
+changes aligned with the milestones in `PLAN.md`.
 
 ## Prerequisites
 
 - [Git](https://git-scm.com/).
 - [Rust](https://rustup.rs/). The repository pins the toolchain in
   `rust-toolchain.toml`; `rustup` installs and selects it automatically.
-- Optional: a LaTeX engine (TeX Live or Tectonic) once `cursus build` exists.
+- Optional: Tectonic, `latexmk` or `pdflatex` to compile PDFs locally. The
+  golden LaTeX tests run without one; the PDF test skips. See
+  [docs/building.md](docs/building.md).
 - Optional: [`cargo-deny`](https://github.com/EmbarkStudios/cargo-deny) for the
   dependency check that CI runs.
 

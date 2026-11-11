@@ -5,6 +5,7 @@
 //! one JSON object per invocation.
 
 use std::fmt;
+use std::fs;
 use std::path::{Path, PathBuf};
 
 use clap::{Parser, Subcommand};
@@ -82,7 +83,7 @@ pub fn run(cli: Cli) -> Result<(), CliError> {
     match command {
         Command::Init => Err(CliError::NotImplemented { command: "init" }),
         Command::List { .. } => Err(CliError::NotImplemented { command: "list" }),
-        Command::Build { .. } => Err(CliError::NotImplemented { command: "build" }),
+        Command::Build { target, output } => build(json, &target, output.as_deref()),
         Command::Validate => validate(json),
         Command::Schema => {
             let schema = json_schema();
@@ -122,6 +123,81 @@ fn validate(json: bool) -> Result<(), CliError> {
     Ok(())
 }
 
+fn build(json: bool, target: &str, output: Option<&Path>) -> Result<(), CliError> {
+    let project = Project::load(Path::new(".")).map_err(CliError::from)?;
+    let issues = project.validate();
+    if !issues.is_empty() {
+        return Err(CliError::InvalidData { issues });
+    }
+
+    let file = project
+        .find_target(target)
+        .ok_or_else(|| CliError::TargetNotFound {
+            target: target.to_owned(),
+        })?;
+    let resolved = project
+        .resolve(file)
+        .map_err(|issues| CliError::InvalidData { issues })?;
+    let tex = cursus_render::render(&resolved).map_err(|error| CliError::Build {
+        message: error.to_string(),
+    })?;
+
+    let pdf = output_path(output, &file.id);
+    let output_dir = parent_directory(&pdf);
+    fs::create_dir_all(output_dir).map_err(|source| CliError::Io {
+        action: "create",
+        path: output_dir.to_path_buf(),
+        source,
+    })?;
+
+    let tex_path = pdf.with_extension("tex");
+    fs::write(&tex_path, tex).map_err(|source| CliError::Io {
+        action: "write",
+        path: tex_path.clone(),
+        source,
+    })?;
+
+    let pdf =
+        cursus_render::compile_pdf(&tex_path, output_dir).map_err(|error| CliError::Build {
+            message: error.to_string(),
+        })?;
+
+    if json {
+        print_success(
+            "build",
+            &json!({
+                "target": file.id,
+                "tex": tex_path.display().to_string(),
+                "pdf": pdf.display().to_string(),
+            }),
+        );
+    } else {
+        println!("built {} -> {}", file.id, pdf.display());
+    }
+
+    Ok(())
+}
+
+fn output_path(output: Option<&Path>, target: &str) -> PathBuf {
+    match output {
+        Some(path)
+            if path
+                .extension()
+                .is_some_and(|extension| extension.eq_ignore_ascii_case("pdf")) =>
+        {
+            path.to_path_buf()
+        }
+        Some(directory) => directory.join(format!("{target}.pdf")),
+        None => Path::new("output").join(format!("{target}.pdf")),
+    }
+}
+
+fn parent_directory(path: &Path) -> &Path {
+    path.parent()
+        .filter(|parent| !parent.as_os_str().is_empty())
+        .unwrap_or_else(|| Path::new("."))
+}
+
 fn print_success(command: &'static str, data: &Value) {
     let envelope = SuccessEnvelope {
         ok: true,
@@ -142,9 +218,16 @@ pub enum CliError {
     InvalidData {
         issues: Vec<Issue>,
     },
+    TargetNotFound {
+        target: String,
+    },
     Io {
+        action: &'static str,
         path: PathBuf,
         source: std::io::Error,
+    },
+    Build {
+        message: String,
     },
 }
 
@@ -155,15 +238,18 @@ impl CliError {
         match self {
             Self::NotImplemented { .. } => "not_implemented",
             Self::InvalidData { .. } => "invalid_data",
+            Self::TargetNotFound { .. } => "target_not_found",
             Self::Io { .. } => "io_error",
+            Self::Build { .. } => "build_failed",
         }
     }
 
     pub fn exit_code(&self) -> u8 {
         match self {
             Self::NotImplemented { .. } => EXIT_NOT_IMPLEMENTED,
-            Self::InvalidData { .. } => EXIT_INVALID_DATA,
+            Self::InvalidData { .. } | Self::TargetNotFound { .. } => EXIT_INVALID_DATA,
             Self::Io { .. } => EXIT_IO,
+            Self::Build { .. } => EXIT_BUILD,
         }
     }
 
@@ -196,9 +282,17 @@ impl fmt::Display for CliError {
                 }
                 Ok(())
             }
-            Self::Io { path, source } => {
-                write!(f, "failed to read {}: {source}", path.display())
+            Self::TargetNotFound { target } => {
+                write!(f, "target `{target}` not found in targets/")
             }
+            Self::Io {
+                action,
+                path,
+                source,
+            } => {
+                write!(f, "failed to {action} {}: {source}", path.display())
+            }
+            Self::Build { message } => f.write_str(message),
         }
     }
 }
@@ -222,7 +316,11 @@ impl From<LoadError> for CliError {
                     "no data/ or targets/ directory found; run cursus from a project root",
                 )],
             },
-            LoadError::Io { path, source } => Self::Io { path, source },
+            LoadError::Io { path, source } => Self::Io {
+                action: "read",
+                path,
+                source,
+            },
         }
     }
 }
