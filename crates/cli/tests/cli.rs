@@ -380,3 +380,56 @@ fn build_tex_only_matches_the_tex_from_a_normal_build() {
     let full = fs::read(full_dir.path().join("acme-swe.tex")).expect("read normal TeX");
     assert_eq!(tex_only, full, "the .tex files differ between modes");
 }
+
+#[test]
+fn build_fails_when_cursus_latex_is_invalid() {
+    let directory = tempfile::tempdir().expect("create temp directory");
+
+    let output = cursus()
+        .current_dir(fixture("valid"))
+        .env("CURSUS_LATEX", "foo")
+        .args(["build", "acme-swe", "--output"])
+        .arg(directory.path())
+        .arg("--json")
+        .output()
+        .expect("run cursus");
+
+    assert_eq!(output.status.code(), Some(4));
+    let value: Value = serde_json::from_slice(&output.stdout).expect("valid json");
+    assert_eq!(value["ok"], false);
+    assert_eq!(value["command"], "build");
+    assert_eq!(value["error"]["code"], "build_failed");
+    assert_eq!(
+        value["error"]["message"],
+        "CURSUS_LATEX=foo is invalid; use tectonic, latexmk or pdflatex"
+    );
+    assert!(!directory.path().join("acme-swe.pdf").exists());
+}
+
+#[test]
+fn build_fails_when_the_pinned_compiler_is_missing() {
+    let directory = tempfile::tempdir().expect("create temp directory");
+    let empty_path = directory.path().join("empty-path");
+    fs::create_dir(&empty_path).expect("create empty PATH directory");
+
+    let output = cursus()
+        .current_dir(fixture("valid"))
+        .env("PATH", &empty_path)
+        .env("CURSUS_LATEX", "pdflatex")
+        .args(["build", "acme-swe", "--output"])
+        .arg(directory.path())
+        .arg("--json")
+        .output()
+        .expect("run cursus");
+
+    assert_eq!(output.status.code(), Some(4));
+    let value: Value = serde_json::from_slice(&output.stdout).expect("valid json");
+    assert_eq!(value["ok"], false);
+    assert_eq!(value["command"], "build");
+    assert_eq!(value["error"]["code"], "build_failed");
+    assert_eq!(
+        value["error"]["message"],
+        "CURSUS_LATEX=pdflatex is set but pdflatex was not found on PATH"
+    );
+    assert!(!directory.path().join("acme-swe.pdf").exists());
+}

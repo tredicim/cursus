@@ -7,6 +7,7 @@
 //! `CURSUS_LATEX=tectonic|latexmk|pdflatex` pins one explicitly.
 
 use std::env;
+use std::ffi::OsStr;
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
@@ -33,6 +34,15 @@ impl Kind {
     fn program(self) -> &'static str {
         self.name()
     }
+
+    fn from_name(name: &str) -> Option<Self> {
+        match name {
+            "tectonic" => Some(Self::Tectonic),
+            "latexmk" => Some(Self::Latexmk),
+            "pdflatex" => Some(Self::PdfLatex),
+            _ => None,
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -47,6 +57,12 @@ pub enum CompileError {
         "no LaTeX compiler found; install Tectonic or TeX Live/MiKTeX (pdflatex or latexmk) and put it on PATH"
     )]
     NoCompiler,
+
+    #[error("CURSUS_LATEX={value} is invalid; use tectonic, latexmk or pdflatex")]
+    InvalidConfiguredCompiler { value: String },
+
+    #[error("CURSUS_LATEX={name} is set but {name} was not found on PATH")]
+    ConfiguredCompilerMissing { name: &'static str },
 
     #[error("failed to run {compiler}: {source}")]
     Spawn {
@@ -69,14 +85,15 @@ pub enum CompileError {
     Io(#[from] io::Error),
 }
 
-/// Name of the compiler Cursus would use, if one is installed.
+/// Name of the compiler Cursus would use, if one is installed and configured
+/// correctly.
 pub fn compiler_name() -> Option<&'static str> {
-    detect().map(|compiler| compiler.kind.name())
+    detect().ok().flatten().map(|compiler| compiler.kind.name())
 }
 
 /// Whether a PDF can be compiled on this machine.
 pub fn latex_available() -> bool {
-    detect().is_some()
+    matches!(detect(), Ok(Some(_)))
 }
 
 /// Compile `tex` and return the path of the PDF next to it.
@@ -84,7 +101,7 @@ pub fn latex_available() -> bool {
 /// `output_dir` is created if needed. Auxiliary files are removed afterwards;
 /// the `.tex` and `.pdf` files stay.
 pub fn compile_pdf(tex: &Path, output_dir: &Path) -> Result<PathBuf, CompileError> {
-    let compiler = detect().ok_or(CompileError::NoCompiler)?;
+    let compiler = detect()?.ok_or(CompileError::NoCompiler)?;
 
     fs::create_dir_all(output_dir)?;
     let output_dir = fs::canonicalize(output_dir)?;
@@ -147,36 +164,46 @@ pub fn compile_pdf(tex: &Path, output_dir: &Path) -> Result<PathBuf, CompileErro
     Ok(pdf)
 }
 
-fn detect() -> Option<Compiler> {
-    if let Some(configured) = configured_compiler() {
-        return Some(configured);
+fn detect() -> Result<Option<Compiler>, CompileError> {
+    detect_with(
+        env::var_os("CURSUS_LATEX").as_deref(),
+        env::var_os("PATH").as_deref(),
+    )
+}
+
+/// Detect a compiler without reading the process environment, so tests can
+/// pass a configured value and a `PATH` without racing on global state.
+fn detect_with(
+    configured: Option<&OsStr>,
+    path: Option<&OsStr>,
+) -> Result<Option<Compiler>, CompileError> {
+    if let Some(value) = configured {
+        let value = value
+            .to_str()
+            .ok_or_else(|| CompileError::InvalidConfiguredCompiler {
+                value: value.to_string_lossy().into_owned(),
+            })?;
+        let kind =
+            Kind::from_name(value).ok_or_else(|| CompileError::InvalidConfiguredCompiler {
+                value: value.to_owned(),
+            })?;
+        let program = find_in_path(kind.program(), path)
+            .ok_or(CompileError::ConfiguredCompilerMissing { name: kind.name() })?;
+
+        return Ok(Some(Compiler { kind, program }));
     }
 
     for kind in [Kind::Tectonic, Kind::Latexmk, Kind::PdfLatex] {
-        if let Some(program) = find_in_path(kind.program()) {
-            return Some(Compiler { kind, program });
+        if let Some(program) = find_in_path(kind.program(), path) {
+            return Ok(Some(Compiler { kind, program }));
         }
     }
 
-    None
+    Ok(None)
 }
 
-fn configured_compiler() -> Option<Compiler> {
-    let value = env::var("CURSUS_LATEX").ok()?;
-    let kind = match value.as_str() {
-        "tectonic" => Kind::Tectonic,
-        "latexmk" => Kind::Latexmk,
-        "pdflatex" => Kind::PdfLatex,
-        _ => return None,
-    };
-    let program = find_in_path(kind.program())?;
-
-    Some(Compiler { kind, program })
-}
-
-fn find_in_path(name: &str) -> Option<PathBuf> {
-    let path = env::var_os("PATH")?;
-    for directory in env::split_paths(&path) {
+fn find_in_path(name: &str, path: Option<&OsStr>) -> Option<PathBuf> {
+    for directory in env::split_paths(path?) {
         let candidate = directory.join(name);
         if is_executable(&candidate) {
             return Some(candidate);
@@ -236,4 +263,40 @@ fn tail(value: &str, limit: usize) -> String {
         start += 1;
     }
     format!("...{}", &value[start..])
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const EMPTY_PATH: &str = "/cursus-test-path-that-does-not-exist";
+
+    #[test]
+    fn unset_configured_compiler_uses_detection() {
+        let compiler = detect_with(None, Some(OsStr::new(EMPTY_PATH))).expect("detection succeeds");
+
+        assert!(compiler.is_none());
+    }
+
+    #[test]
+    fn invalid_configured_value_is_an_error() {
+        let error = detect_with(Some(OsStr::new("foo")), Some(OsStr::new(EMPTY_PATH)))
+            .expect_err("an invalid value must fail");
+
+        assert_eq!(
+            error.to_string(),
+            "CURSUS_LATEX=foo is invalid; use tectonic, latexmk or pdflatex"
+        );
+    }
+
+    #[test]
+    fn configured_compiler_must_be_on_path() {
+        let error = detect_with(Some(OsStr::new("pdflatex")), Some(OsStr::new(EMPTY_PATH)))
+            .expect_err("a missing pinned compiler must fail");
+
+        assert_eq!(
+            error.to_string(),
+            "CURSUS_LATEX=pdflatex is set but pdflatex was not found on PATH"
+        );
+    }
 }

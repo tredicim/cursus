@@ -86,7 +86,16 @@ Cursus does not bundle a TeX distribution. It finds, in order:
 3. `pdflatex`
 
 `CURSUS_LATEX=tectonic`, `CURSUS_LATEX=latexmk` or `CURSUS_LATEX=pdflatex`
-pins one when several are installed.
+pins one when several are installed. When the variable is set, Cursus never
+falls back to another engine:
+
+- An unknown value fails with
+  `CURSUS_LATEX=foo is invalid; use tectonic, latexmk or pdflatex`.
+- A known value whose binary is not on `PATH` fails with
+  `CURSUS_LATEX=pdflatex is set but pdflatex was not found on PATH`.
+
+Both are build failures (exit code `4`), so a pinned compiler is either the one
+that runs or the build stops.
 
 This is a deliberate trade-off:
 
@@ -125,8 +134,9 @@ of every standard distribution and the default Tectonic bundle.
 
 ## Failures
 
-- Exit code `4` (`build_failed`) means the compiler was missing or LaTeX failed.
-  The error includes the tail of the compiler output.
+- Exit code `4` (`build_failed`) means the compiler was missing, `CURSUS_LATEX`
+  was invalid or named an engine that is not installed, or LaTeX failed. The
+  error includes the tail of the compiler output when a compiler ran.
 - Exit code `1` (`invalid_data` or `target_not_found`) means the project did not
   validate, or the target name does not exist. Nothing is written in that case.
 - Exit code `3` (`io_error`) means a file or directory could not be read or
