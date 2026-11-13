@@ -67,7 +67,8 @@ cargo run -p cursus-cli -- build acme-swe
 `build` writes `output/<target>.tex` and `output/<target>.pdf`; use
 `--output <directory>` or `--output <file>.pdf` to choose another location.
 It needs Tectonic, `latexmk` or `pdflatex` on `PATH`; see
-[docs/building.md](docs/building.md).
+[docs/building.md](docs/building.md). Add `--tex-only` to stop after the `.tex`
+file, with no TeX installation required.
 
 Every command accepts `--json`; machine-readable output goes to stdout as one
 object:
