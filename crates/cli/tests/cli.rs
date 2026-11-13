@@ -230,3 +230,153 @@ fn build_writes_tex_and_pdf_when_a_latex_compiler_is_available() {
     assert!(tex.contains("\\documentclass"));
     assert!(tex.contains("\\cvsection{Experience}"));
 }
+
+#[test]
+fn build_tex_only_writes_tex_without_a_latex_compiler() {
+    let directory = tempfile::tempdir().expect("create temp directory");
+    let empty_path = directory.path().join("empty-path");
+    fs::create_dir(&empty_path).expect("create empty PATH directory");
+
+    let output = cursus()
+        .current_dir(fixture("valid"))
+        .env("PATH", &empty_path)
+        .args(["build", "acme-swe", "--tex-only", "--output"])
+        .arg(directory.path())
+        .arg("--json")
+        .output()
+        .expect("run cursus");
+
+    assert!(
+        output.status.success(),
+        "tex-only build failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let value: Value = serde_json::from_slice(&output.stdout).expect("valid json");
+    assert_eq!(value["ok"], true);
+    assert_eq!(value["command"], "build");
+    assert_eq!(value["data"]["target"], "acme-swe");
+    assert!(
+        value["data"].get("pdf").is_none(),
+        "tex-only JSON must not have a pdf field: {value}"
+    );
+
+    let tex = PathBuf::from(value["data"]["tex"].as_str().expect("tex path"));
+    assert_eq!(tex, directory.path().join("acme-swe.tex"));
+    assert!(tex.is_file(), "TeX was not written");
+    assert!(
+        !directory.path().join("acme-swe.pdf").exists(),
+        "tex-only must not write a PDF"
+    );
+
+    let tex = fs::read_to_string(&tex).expect("read TeX");
+    let first_content_line = tex
+        .lines()
+        .find(|line| !line.starts_with('%'))
+        .expect("TeX is not empty");
+    assert!(
+        first_content_line.starts_with("\\documentclass"),
+        "unexpected first line: {first_content_line}"
+    );
+    assert!(tex.contains("\\cvsection{Experience}"));
+}
+
+#[test]
+fn build_tex_only_human_output_names_the_tex_file() {
+    let directory = tempfile::tempdir().expect("create temp directory");
+
+    let output = cursus()
+        .current_dir(fixture("valid"))
+        .args(["build", "acme-swe", "--tex-only", "--output"])
+        .arg(directory.path())
+        .output()
+        .expect("run cursus");
+
+    assert!(output.status.success());
+    let stdout = String::from_utf8(output.stdout).expect("utf-8 stdout");
+    assert!(stdout.contains("rendered acme-swe -> "));
+    assert!(stdout.contains("acme-swe.tex"));
+    assert!(!stdout.contains(".pdf"));
+}
+
+#[test]
+fn build_tex_only_accepts_a_pdf_output_path() {
+    let directory = tempfile::tempdir().expect("create temp directory");
+    let pdf = directory.path().join("custom.pdf");
+
+    let output = cursus()
+        .current_dir(fixture("valid"))
+        .args(["build", "acme-swe", "--tex-only", "--output"])
+        .arg(&pdf)
+        .output()
+        .expect("run cursus");
+
+    assert!(
+        output.status.success(),
+        "tex-only build failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(directory.path().join("custom.tex").is_file());
+    assert!(!pdf.exists(), "tex-only must not write the PDF");
+}
+
+#[test]
+fn build_tex_only_skips_compiler_detection() {
+    let directory = tempfile::tempdir().expect("create temp directory");
+    let empty_path = directory.path().join("empty-path");
+    fs::create_dir(&empty_path).expect("create empty PATH directory");
+
+    let output = cursus()
+        .current_dir(fixture("valid"))
+        .env("PATH", &empty_path)
+        .env("CURSUS_LATEX", "definitely-not-installed")
+        .args(["build", "acme-swe", "--tex-only", "--output"])
+        .arg(directory.path())
+        .output()
+        .expect("run cursus");
+
+    assert!(
+        output.status.success(),
+        "tex-only build should not read CURSUS_LATEX: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+}
+
+#[test]
+fn build_tex_only_matches_the_tex_from_a_normal_build() {
+    if !cursus_render::latex_available() {
+        eprintln!("skipping comparison test: no LaTeX compiler on PATH");
+        return;
+    }
+
+    let tex_only_dir = tempfile::tempdir().expect("create temp directory");
+    let full_dir = tempfile::tempdir().expect("create temp directory");
+
+    let tex_only = cursus()
+        .current_dir(fixture("valid"))
+        .args(["build", "acme-swe", "--tex-only", "--output"])
+        .arg(tex_only_dir.path())
+        .output()
+        .expect("run cursus");
+    assert!(
+        tex_only.status.success(),
+        "tex-only build failed: {}",
+        String::from_utf8_lossy(&tex_only.stderr)
+    );
+
+    let full = cursus()
+        .current_dir(fixture("valid"))
+        .args(["build", "acme-swe", "--output"])
+        .arg(full_dir.path())
+        .output()
+        .expect("run cursus");
+    assert!(
+        full.status.success(),
+        "build failed: {}",
+        String::from_utf8_lossy(&full.stderr)
+    );
+
+    let tex_only = fs::read(tex_only_dir.path().join("acme-swe.tex")).expect("read tex-only TeX");
+    let full = fs::read(full_dir.path().join("acme-swe.tex")).expect("read normal TeX");
+    assert_eq!(tex_only, full, "the .tex files differ between modes");
+}

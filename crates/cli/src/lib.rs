@@ -54,6 +54,9 @@ pub enum Command {
     Build {
         /// Target name, e.g. acme-swe.
         target: String,
+        /// Write the `.tex` file and skip the LaTeX/PDF step.
+        #[arg(long)]
+        tex_only: bool,
         /// Write the PDF here instead of the output/ folder. A directory keeps
         /// the target name; a `.pdf` path sets the exact file.
         #[arg(long)]
@@ -83,7 +86,11 @@ pub fn run(cli: Cli) -> Result<(), CliError> {
     match command {
         Command::Init => Err(CliError::NotImplemented { command: "init" }),
         Command::List { .. } => Err(CliError::NotImplemented { command: "list" }),
-        Command::Build { target, output } => build(json, &target, output.as_deref()),
+        Command::Build {
+            target,
+            tex_only,
+            output,
+        } => build(json, &target, tex_only, output.as_deref()),
         Command::Validate => validate(json),
         Command::Schema => {
             let schema = json_schema();
@@ -123,7 +130,7 @@ fn validate(json: bool) -> Result<(), CliError> {
     Ok(())
 }
 
-fn build(json: bool, target: &str, output: Option<&Path>) -> Result<(), CliError> {
+fn build(json: bool, target: &str, tex_only: bool, output: Option<&Path>) -> Result<(), CliError> {
     let project = Project::load(Path::new(".")).map_err(CliError::from)?;
     let issues = project.validate();
     if !issues.is_empty() {
@@ -156,6 +163,22 @@ fn build(json: bool, target: &str, output: Option<&Path>) -> Result<(), CliError
         path: tex_path.clone(),
         source,
     })?;
+
+    if tex_only {
+        if json {
+            print_success(
+                "build",
+                &json!({
+                    "target": file.id,
+                    "tex": tex_path.display().to_string(),
+                }),
+            );
+        } else {
+            println!("rendered {} -> {}", file.id, tex_path.display());
+        }
+
+        return Ok(());
+    }
 
     let pdf =
         cursus_render::compile_pdf(&tex_path, output_dir).map_err(|error| CliError::Build {

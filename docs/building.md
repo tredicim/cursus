@@ -1,7 +1,7 @@
 # Building a PDF
 
 `cursus build <target>` renders a target to LaTeX, writes the `.tex` file, then
-compiles it to PDF.
+compiles it to PDF. Pass `--tex-only` to stop after the first step.
 
 ```sh
 cd examples/valid
@@ -36,6 +36,46 @@ are created. `--json` reports both paths:
   }
 }
 ```
+
+## LaTeX without a PDF
+
+`cursus build <target> --tex-only` renders the document and writes the `.tex`
+file, then stops before looking for a LaTeX compiler. It succeeds on a machine
+with no TeX distribution installed, which is useful for inspecting or diffing
+the source, for an external pipeline, and for CI:
+
+```sh
+cd examples/valid
+cargo run -p cursus-cli -- build acme-swe --tex-only
+```
+
+```
+rendered acme-swe -> output/acme-swe.tex
+```
+
+The file is byte-identical to the one a normal build writes. Output paths keep
+the same rules as a PDF build, with a `.tex` extension:
+
+- Default: `output/<target>.tex`.
+- `--output <directory>`: writes `<directory>/<target>.tex`.
+- `--output <file>.pdf`: writes the sibling `<file>.tex`.
+
+Machine output reports `target` and `tex` only; there is no `pdf` field in this
+mode:
+
+```json
+{
+  "ok": true,
+  "command": "build",
+  "data": {
+    "target": "acme-swe",
+    "tex": "output/acme-swe.tex"
+  }
+}
+```
+
+`--tex-only` bypasses compiler detection entirely, so `CURSUS_LATEX` is not
+read in this mode.
 
 ## Compiler choice
 
