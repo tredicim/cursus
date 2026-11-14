@@ -46,6 +46,7 @@ cargo run -p cursus-cli -- validate
 | `bad-link` | Links need an absolute `http://` or `https://` URL. |
 | `duplicate-id` | Entry IDs are unique. |
 | `missing-entry` | Targets may only include existing entries. |
+| `tag-whitespace` | Tags must not have leading or trailing whitespace. |
 | `unknown-field` | Unknown YAML fields are rejected. |
 | `unknown-variant` | Targets may only select variants the entry defines. |
 

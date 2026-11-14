@@ -124,6 +124,12 @@ fn validate_entry(file: &EntryFile, issues: &mut Vec<Issue>) {
                 Some(format!("tags[{index}]")),
                 "tag must not be empty",
             ));
+        } else if tag.trim() != tag {
+            issues.push(Issue::new(
+                path,
+                Some(format!("tags[{index}]")),
+                "tag must not have leading or trailing whitespace",
+            ));
         } else if !seen_tags.insert(tag.as_str()) {
             issues.push(Issue::new(
                 path,

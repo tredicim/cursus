@@ -82,6 +82,11 @@ fn invalid_fixtures_explain_the_actual_problem() {
         ("unknown-variant", "include[0].variant", "has no variant"),
         ("missing-entry", "include[0].id", "does not exist"),
         ("bad-link", "links[0].url", "absolute http"),
+        (
+            "tag-whitespace",
+            "tags[0]",
+            "tag must not have leading or trailing whitespace",
+        ),
         ("unknown-field", "variants.default", "unknown field"),
     ];
 
