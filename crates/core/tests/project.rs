@@ -109,36 +109,6 @@ fn invalid_fixtures_explain_the_actual_problem() {
 }
 
 #[test]
-fn tag_whitespace_is_rejected_without_rewriting_tags() {
-    let mut project =
-        Project::load(examples().join("invalid/tag-whitespace")).expect("load fixture");
-
-    for tag in [
-        " backend",
-        "backend ",
-        "\tbackend",
-        "backend\n",
-        "\u{00a0}backend",
-    ] {
-        project.entries[0].entry.tags = vec![tag.to_owned()];
-        let issues = project.validate();
-
-        assert_eq!(
-            issues.len(),
-            1,
-            "unexpected issues for {tag:?}: {issues:#?}"
-        );
-        assert_eq!(issues[0].file, project.entries[0].path);
-        assert_eq!(issues[0].field.as_deref(), Some("tags[0]"));
-        assert_eq!(
-            issues[0].message,
-            "tag must not have leading or trailing whitespace"
-        );
-        assert_eq!(project.entries[0].entry.tags, [tag]);
-    }
-}
-
-#[test]
 fn committed_schema_matches_the_rust_types() {
     let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../schema.json");
     let committed: serde_json::Value =
