@@ -1,0 +1,9 @@
+id: hackathon-award
+kind: award
+title: First place, University Hackathon
+organization: University of Bologna
+start: 2024-04
+tags: [" backend"]
+variants:
+  default:
+    summary: Built a scheduling tool for student study groups in 24 hours.

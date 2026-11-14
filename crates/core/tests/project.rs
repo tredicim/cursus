@@ -82,6 +82,11 @@ fn invalid_fixtures_explain_the_actual_problem() {
         ("unknown-variant", "include[0].variant", "has no variant"),
         ("missing-entry", "include[0].id", "does not exist"),
         ("bad-link", "links[0].url", "absolute http"),
+        (
+            "tag-whitespace",
+            "tags[0]",
+            "tag must not have leading or trailing whitespace",
+        ),
         ("unknown-field", "variants.default", "unknown field"),
     ];
 
@@ -100,6 +105,36 @@ fn invalid_fixtures_explain_the_actual_problem() {
             }),
             "fixture {fixture} did not report `{reason}` at `{field}`: {issues:#?}"
         );
+    }
+}
+
+#[test]
+fn tag_whitespace_is_rejected_without_rewriting_tags() {
+    let mut project =
+        Project::load(examples().join("invalid/tag-whitespace")).expect("load fixture");
+
+    for tag in [
+        " backend",
+        "backend ",
+        "\tbackend",
+        "backend\n",
+        "\u{00a0}backend",
+    ] {
+        project.entries[0].entry.tags = vec![tag.to_owned()];
+        let issues = project.validate();
+
+        assert_eq!(
+            issues.len(),
+            1,
+            "unexpected issues for {tag:?}: {issues:#?}"
+        );
+        assert_eq!(issues[0].file, project.entries[0].path);
+        assert_eq!(issues[0].field.as_deref(), Some("tags[0]"));
+        assert_eq!(
+            issues[0].message,
+            "tag must not have leading or trailing whitespace"
+        );
+        assert_eq!(project.entries[0].entry.tags, [tag]);
     }
 }
 

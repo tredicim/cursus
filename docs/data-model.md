@@ -74,7 +74,7 @@ variants:
 | `location` | no | Free text, e.g. `Remote` or `Bologna, Italy`. |
 | `start` | no | `YYYY-MM`, month `01`–`12`. |
 | `end` | no | `YYYY-MM`, not before `start`. Omit for ongoing entries. |
-| `tags` | no | Non-empty, unique strings. |
+| `tags` | no | Non-empty, unique strings with no leading or trailing whitespace. |
 | `links` | no | `label` plus an absolute `http://` or `https://` URL. |
 | `variants` | yes | At least one named framing. |
 
