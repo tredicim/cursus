@@ -9,9 +9,9 @@ experiences, projects, skills and education in one place, then pick exactly what
 goes into each CV, and which *framing* of it, for every application.
 
 **Status:** early, but the first pipeline works. Entries and targets are YAML,
-`cursus validate` checks them, and `cursus build` renders the `classic` template
-to LaTeX and PDF. `init`, `list`, the desktop app and the ATS checker are next.
-See [PLAN.md](PLAN.md).
+`cursus init` scaffolds a project, `cursus validate` checks it, and `cursus
+build` renders the `classic` template to LaTeX and PDF. `list`, the desktop app
+and the ATS checker are next. See [PLAN.md](PLAN.md).
 
 ## The problem
 
@@ -53,16 +53,22 @@ A Rust core shared by a desktop app (Tauri, TypeScript UI) and a CLI for scripti
 
 ## CLI
 
-`validate`, `build` and `schema` work. `init` and `list` still return
+`init`, `validate`, `build` and `schema` work. `list` still returns
 `not_implemented`.
 
 ```sh
 cargo run -p cursus-cli -- --help
 
+# Scaffold data/ and targets/ in the current directory.
+cargo run -p cursus-cli -- init
+
 cd examples/valid
 cargo run -p cursus-cli -- validate
 cargo run -p cursus-cli -- build acme-swe
 ```
+
+`init` creates a starter entry and target. It never overwrites existing files,
+so running it again only reports the paths it skipped.
 
 `build` writes `output/<target>.tex` and `output/<target>.pdf`; use
 `--output <directory>` or `--output <file>.pdf` to choose another location.

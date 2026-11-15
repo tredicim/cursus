@@ -36,31 +36,249 @@ fn version_comes_from_cargo() {
 
 #[test]
 fn unimplemented_commands_use_the_stable_envelope() {
-    for command in ["init", "list"] {
-        let output = cursus()
-            .args([command, "--json"])
-            .output()
-            .expect("run cursus");
-
-        assert_eq!(output.status.code(), Some(5), "{command}");
-        let value: Value = serde_json::from_slice(&output.stdout).expect("valid json");
-        assert_eq!(value["ok"], false);
-        assert_eq!(value["command"], command);
-        assert_eq!(value["error"]["code"], "not_implemented");
-        assert!(value["error"]["message"].is_string());
-    }
-}
-
-#[test]
-fn json_flag_works_before_the_subcommand() {
     let output = cursus()
-        .args(["--json", "init"])
+        .args(["list", "--json"])
         .output()
         .expect("run cursus");
 
     assert_eq!(output.status.code(), Some(5));
     let value: Value = serde_json::from_slice(&output.stdout).expect("valid json");
     assert_eq!(value["ok"], false);
+    assert_eq!(value["command"], "list");
+    assert_eq!(value["error"]["code"], "not_implemented");
+    assert!(value["error"]["message"].is_string());
+}
+
+#[test]
+fn json_flag_works_before_the_subcommand() {
+    let directory = tempfile::tempdir().expect("create temp directory");
+    let output = cursus()
+        .current_dir(directory.path())
+        .args(["--json", "init"])
+        .output()
+        .expect("run cursus");
+
+    assert!(output.status.success());
+    let value: Value = serde_json::from_slice(&output.stdout).expect("valid json");
+    assert_eq!(value["ok"], true);
+}
+
+#[test]
+fn init_scaffolds_a_valid_project() {
+    let directory = tempfile::tempdir().expect("create temp directory");
+    let output = cursus()
+        .current_dir(directory.path())
+        .arg("init")
+        .output()
+        .expect("run cursus");
+
+    assert!(
+        output.status.success(),
+        "init failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8(output.stdout).expect("utf-8 stdout");
+    for path in [
+        "data/",
+        "data/experience/",
+        "targets/",
+        "data/experience/first-entry.yaml",
+        "targets/my-cv.yaml",
+    ] {
+        assert!(
+            stdout.contains(path),
+            "init did not report {path}: {stdout}"
+        );
+    }
+
+    assert!(
+        directory
+            .path()
+            .join("data/experience/first-entry.yaml")
+            .is_file()
+    );
+    assert!(directory.path().join("targets/my-cv.yaml").is_file());
+
+    let validate = cursus()
+        .current_dir(directory.path())
+        .arg("validate")
+        .output()
+        .expect("run cursus");
+    assert!(
+        validate.status.success(),
+        "validate failed after init: {}",
+        String::from_utf8_lossy(&validate.stderr)
+    );
+    let stdout = String::from_utf8(validate.stdout).expect("utf-8 stdout");
+    assert!(stdout.contains("valid: 1 entries, 1 target"));
+}
+
+#[test]
+fn init_is_idempotent_and_reports_skipped_paths() {
+    let directory = tempfile::tempdir().expect("create temp directory");
+    let first = cursus()
+        .current_dir(directory.path())
+        .arg("init")
+        .output()
+        .expect("run cursus");
+    assert!(first.status.success());
+
+    let entry = directory.path().join("data/experience/first-entry.yaml");
+    let target = directory.path().join("targets/my-cv.yaml");
+    let entry_before = fs::read(&entry).expect("read starter entry");
+    let target_before = fs::read(&target).expect("read starter target");
+
+    let second = cursus()
+        .current_dir(directory.path())
+        .arg("init")
+        .output()
+        .expect("run cursus");
+
+    assert!(second.status.success());
+    let stdout = String::from_utf8(second.stdout).expect("utf-8 stdout");
+    assert!(
+        stdout.contains("0 created, 5 skipped"),
+        "unexpected output: {stdout}"
+    );
+    for path in [
+        "data/",
+        "data/experience/",
+        "targets/",
+        "data/experience/first-entry.yaml",
+        "targets/my-cv.yaml",
+    ] {
+        assert!(
+            stdout.contains(&format!("skipped {path}")),
+            "init did not report skipping {path}: {stdout}"
+        );
+    }
+
+    assert_eq!(fs::read(&entry).expect("read entry"), entry_before);
+    assert_eq!(fs::read(&target).expect("read target"), target_before);
+}
+
+#[test]
+fn init_never_touches_existing_files() {
+    let directory = tempfile::tempdir().expect("create temp directory");
+    let data = directory.path().join("data/experience");
+    let targets = directory.path().join("targets");
+    fs::create_dir_all(&data).expect("create data directory");
+    fs::create_dir_all(&targets).expect("create targets directory");
+
+    let entry = data.join("first-entry.yaml");
+    let target = targets.join("my-cv.yaml");
+    let keep = directory.path().join("data/keep.txt");
+    let entry_contents = "\
+id: first-entry
+kind: project
+title: My own entry
+variants:
+  default:
+    summary: Custom placeholder.
+";
+    let target_contents = "\
+name: My own CV
+template: classic
+include:
+  - id: first-entry
+";
+    fs::write(&entry, entry_contents).expect("write existing entry");
+    fs::write(&target, target_contents).expect("write existing target");
+    fs::write(&keep, "keep me").expect("write extra file");
+
+    let output = cursus()
+        .current_dir(directory.path())
+        .arg("init")
+        .output()
+        .expect("run cursus");
+
+    assert!(output.status.success());
+    let stdout = String::from_utf8(output.stdout).expect("utf-8 stdout");
+    assert!(
+        stdout.contains("0 created, 5 skipped"),
+        "unexpected output: {stdout}"
+    );
+
+    assert_eq!(
+        fs::read_to_string(&entry).expect("read existing entry"),
+        entry_contents
+    );
+    assert_eq!(
+        fs::read_to_string(&target).expect("read existing target"),
+        target_contents
+    );
+    assert_eq!(
+        fs::read_to_string(&keep).expect("read extra file"),
+        "keep me"
+    );
+
+    let validate = cursus()
+        .current_dir(directory.path())
+        .arg("validate")
+        .output()
+        .expect("run cursus");
+    assert!(
+        validate.status.success(),
+        "validate failed with existing files: {}",
+        String::from_utf8_lossy(&validate.stderr)
+    );
+}
+
+#[test]
+fn init_json_reports_created_and_skipped_paths() {
+    let directory = tempfile::tempdir().expect("create temp directory");
+    let first = cursus()
+        .current_dir(directory.path())
+        .args(["init", "--json"])
+        .output()
+        .expect("run cursus");
+
+    assert!(first.status.success());
+    let value: Value = serde_json::from_slice(&first.stdout).expect("valid json");
+    assert_eq!(value["ok"], true);
+    assert_eq!(value["command"], "init");
+    assert_eq!(value["data"]["root"], ".");
+    let created = value["data"]["created"].as_array().expect("created array");
+    for path in [
+        "data/",
+        "data/experience/",
+        "targets/",
+        "data/experience/first-entry.yaml",
+        "targets/my-cv.yaml",
+    ] {
+        assert!(
+            created.iter().any(|item| item.as_str() == Some(path)),
+            "created is missing {path}: {value}"
+        );
+    }
+    assert!(
+        value["data"]["skipped"]
+            .as_array()
+            .expect("skipped array")
+            .is_empty()
+    );
+
+    let second = cursus()
+        .current_dir(directory.path())
+        .args(["init", "--json"])
+        .output()
+        .expect("run cursus");
+
+    assert!(second.status.success());
+    let value: Value = serde_json::from_slice(&second.stdout).expect("valid json");
+    assert!(
+        value["data"]["created"]
+            .as_array()
+            .expect("created array")
+            .is_empty()
+    );
+    assert_eq!(
+        value["data"]["skipped"]
+            .as_array()
+            .expect("skipped array")
+            .len(),
+        5
+    );
 }
 
 #[test]

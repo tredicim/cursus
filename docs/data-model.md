@@ -39,8 +39,9 @@ targets/
 - The file name is the target's command-line ID (`acme-swe.yaml` becomes
   `acme-swe`). An entry's `id` field is the reference targets use.
 
-`examples/valid/` is a complete project; `examples/invalid/` contains one broken
-project per validation rule.
+Run `cursus init` in a new directory to create this layout with a starter entry
+and target. `examples/valid/` is a complete project;
+`examples/invalid/` contains one broken project per validation rule.
 
 ## Entry
 
