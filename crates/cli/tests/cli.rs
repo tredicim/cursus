@@ -2,7 +2,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use serde_json::Value;
+use serde_json::{Value, json};
 
 fn cursus() -> Command {
     Command::new(env!("CARGO_BIN_EXE_cursus"))
@@ -32,21 +32,6 @@ fn version_comes_from_cargo() {
     assert!(output.status.success());
     let stdout = String::from_utf8(output.stdout).expect("utf-8 version");
     assert!(stdout.contains(env!("CARGO_PKG_VERSION")));
-}
-
-#[test]
-fn unimplemented_commands_use_the_stable_envelope() {
-    let output = cursus()
-        .args(["list", "--json"])
-        .output()
-        .expect("run cursus");
-
-    assert_eq!(output.status.code(), Some(5));
-    let value: Value = serde_json::from_slice(&output.stdout).expect("valid json");
-    assert_eq!(value["ok"], false);
-    assert_eq!(value["command"], "list");
-    assert_eq!(value["error"]["code"], "not_implemented");
-    assert!(value["error"]["message"].is_string());
 }
 
 #[test]
@@ -353,6 +338,195 @@ fn validate_json_reports_issue_details() {
         issues[0]["message"]
             .as_str()
             .is_some_and(|message| message.contains("has no variant"))
+    );
+}
+
+#[test]
+fn list_shows_every_entry_in_id_order() {
+    let output = cursus()
+        .current_dir(fixture("valid"))
+        .arg("list")
+        .output()
+        .expect("run cursus");
+
+    assert!(
+        output.status.success(),
+        "list failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8(output.stdout).expect("utf-8 stdout");
+    let ids: Vec<&str> = stdout
+        .lines()
+        .map(|line| line.split_whitespace().next().expect("entry id"))
+        .collect();
+    assert_eq!(
+        ids,
+        [
+            "acme-internship",
+            "cursus",
+            "hackathon-award",
+            "languages",
+            "university"
+        ]
+    );
+    assert!(
+        stdout.contains("  experience  "),
+        "human output does not use the stable kind id: {stdout}"
+    );
+    assert!(stdout.contains("[backend, python]"));
+    assert!(
+        stdout.contains("[cli, latex, rust]"),
+        "tags are not sorted: {stdout}"
+    );
+    assert!(
+        !stdout.contains("Acme Software Engineering Internship"),
+        "list must not show target data: {stdout}"
+    );
+}
+
+#[test]
+fn list_filters_by_tag_and_accepts_no_matches() {
+    let backend = cursus()
+        .current_dir(fixture("valid"))
+        .args(["list", "--tag", "backend"])
+        .output()
+        .expect("run cursus");
+
+    assert!(backend.status.success());
+    let stdout = String::from_utf8(backend.stdout).expect("utf-8 stdout");
+    assert_eq!(stdout.lines().count(), 1, "unexpected output: {stdout}");
+    assert!(stdout.starts_with("acme-internship"));
+    assert!(!stdout.contains("cursus"));
+
+    let none = cursus()
+        .current_dir(fixture("valid"))
+        .args(["list", "--tag", "nope"])
+        .output()
+        .expect("run cursus");
+
+    assert!(none.status.success());
+    assert!(
+        String::from_utf8(none.stdout)
+            .expect("utf-8 stdout")
+            .trim()
+            .is_empty()
+    );
+}
+
+#[test]
+fn list_json_exposes_entry_fields_and_sorted_values() {
+    let output = cursus()
+        .current_dir(fixture("valid"))
+        .args(["list", "--json"])
+        .output()
+        .expect("run cursus");
+
+    assert!(output.status.success());
+    let value: Value = serde_json::from_slice(&output.stdout).expect("valid json");
+    assert_eq!(value["ok"], true);
+    assert_eq!(value["command"], "list");
+
+    let entries = value["data"]["entries"].as_array().expect("entries array");
+    assert_eq!(entries.len(), 5);
+    let ids: Vec<&str> = entries
+        .iter()
+        .map(|entry| entry["id"].as_str().expect("entry id"))
+        .collect();
+    assert_eq!(
+        ids,
+        [
+            "acme-internship",
+            "cursus",
+            "hackathon-award",
+            "languages",
+            "university"
+        ]
+    );
+
+    for entry in entries {
+        for field in ["id", "kind", "title", "tags", "variants", "file"] {
+            assert!(
+                entry.get(field).is_some(),
+                "entry is missing {field}: {entry}"
+            );
+        }
+    }
+
+    let acme = &entries[0];
+    assert_eq!(acme["kind"], "experience");
+    assert_eq!(acme["title"], "Software Engineering Intern");
+    assert_eq!(acme["organization"], "Acme Corp");
+    assert_eq!(acme["location"], "Remote");
+    assert_eq!(acme["start"], "2025-06");
+    assert_eq!(acme["end"], "2025-09");
+    assert_eq!(acme["tags"], json!(["backend", "python"]));
+    assert_eq!(acme["variants"], json!(["data-science", "software-eng"]));
+    assert_eq!(acme["file"], "data/experience/acme-internship.yaml");
+
+    let cursus = &entries[1];
+    assert_eq!(cursus["tags"], json!(["cli", "latex", "rust"]));
+
+    let languages = &entries[3];
+    for field in ["organization", "location", "start", "end"] {
+        assert!(
+            languages.get(field).is_none(),
+            "optional field {field} must be omitted: {languages}"
+        );
+    }
+}
+
+#[test]
+fn list_json_filters_by_tag_and_accepts_no_matches() {
+    let backend = cursus()
+        .current_dir(fixture("valid"))
+        .args(["list", "--tag", "backend", "--json"])
+        .output()
+        .expect("run cursus");
+
+    assert!(backend.status.success());
+    let value: Value = serde_json::from_slice(&backend.stdout).expect("valid json");
+    let entries = value["data"]["entries"].as_array().expect("entries array");
+    assert_eq!(entries.len(), 1);
+    assert_eq!(entries[0]["id"], "acme-internship");
+
+    let none = cursus()
+        .current_dir(fixture("valid"))
+        .args(["list", "--tag", "nope", "--json"])
+        .output()
+        .expect("run cursus");
+
+    assert!(none.status.success());
+    let value: Value = serde_json::from_slice(&none.stdout).expect("valid json");
+    assert_eq!(value["ok"], true);
+    assert!(
+        value["data"]["entries"]
+            .as_array()
+            .expect("entries array")
+            .is_empty()
+    );
+}
+
+#[test]
+fn list_refuses_invalid_data() {
+    let output = cursus()
+        .current_dir(fixture("invalid/duplicate-id"))
+        .args(["list", "--json"])
+        .output()
+        .expect("run cursus");
+
+    assert_eq!(output.status.code(), Some(1));
+    let value: Value = serde_json::from_slice(&output.stdout).expect("valid json");
+    assert_eq!(value["ok"], false);
+    assert_eq!(value["command"], "list");
+    assert_eq!(value["error"]["code"], "invalid_data");
+    let issues = value["error"]["details"]["issues"]
+        .as_array()
+        .expect("issues array");
+    assert!(
+        issues.iter().any(|issue| issue["message"]
+            .as_str()
+            .is_some_and(|message| message.contains("duplicate entry id"))),
+        "missing duplicate-id issue: {value}"
     );
 }
 

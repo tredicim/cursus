@@ -10,7 +10,7 @@ use std::io::{ErrorKind, Write};
 use std::path::{Component, Path, PathBuf};
 
 use clap::{Parser, Subcommand};
-use cursus_core::{Issue, LoadError, Project, json_schema};
+use cursus_core::{EntryFile, EntryKind, Issue, LoadError, Project, YearMonth, json_schema};
 use serde::Serialize;
 use serde_json::{Value, json};
 
@@ -20,8 +20,6 @@ pub const EXIT_INVALID_DATA: u8 = 1;
 pub const EXIT_IO: u8 = 3;
 /// Exit code for a failed LaTeX/PDF build.
 pub const EXIT_BUILD: u8 = 4;
-/// Exit code for a command that exists but has no implementation yet.
-pub const EXIT_NOT_IMPLEMENTED: u8 = 5;
 
 #[derive(Debug, Parser)]
 #[command(
@@ -86,7 +84,7 @@ pub fn run(cli: Cli) -> Result<(), CliError> {
 
     match command {
         Command::Init => init(json),
-        Command::List { .. } => Err(CliError::NotImplemented { command: "list" }),
+        Command::List { tag } => list(json, tag.as_deref()),
         Command::Build {
             target,
             tex_only,
@@ -222,6 +220,113 @@ fn display_path(path: &Path) -> String {
         .join("/")
 }
 
+#[derive(Debug, Serialize)]
+struct EntrySummary<'a> {
+    id: &'a str,
+    kind: EntryKind,
+    title: &'a str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    organization: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    location: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    start: Option<&'a YearMonth>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    end: Option<&'a YearMonth>,
+    tags: Vec<&'a str>,
+    variants: Vec<&'a str>,
+    file: String,
+}
+
+fn list(json: bool, tag: Option<&str>) -> Result<(), CliError> {
+    let project = Project::load(Path::new(".")).map_err(CliError::from)?;
+    let issues = project.validate();
+    if !issues.is_empty() {
+        return Err(CliError::InvalidData { issues });
+    }
+
+    let mut files: Vec<&EntryFile> = project
+        .entries
+        .iter()
+        .filter(|file| tag.is_none_or(|tag| file.entry.tags.iter().any(|value| value == tag)))
+        .collect();
+    files.sort_by(|left, right| left.entry.id.cmp(&right.entry.id));
+
+    let entries: Vec<EntrySummary<'_>> =
+        files.iter().map(|file| summarize(&project, file)).collect();
+
+    if json {
+        print_success("list", &json!({ "entries": entries }));
+    } else {
+        print_entries(&entries);
+    }
+
+    Ok(())
+}
+
+fn summarize<'a>(project: &Project, file: &'a EntryFile) -> EntrySummary<'a> {
+    let entry = &file.entry;
+
+    let mut tags: Vec<&str> = entry.tags.iter().map(String::as_str).collect();
+    tags.sort_unstable();
+
+    let mut variants: Vec<&str> = entry.variants.keys().map(String::as_str).collect();
+    variants.sort_unstable();
+
+    EntrySummary {
+        id: &entry.id,
+        kind: entry.kind,
+        title: &entry.title,
+        organization: entry.organization.as_deref(),
+        location: entry.location.as_deref(),
+        start: entry.start.as_ref(),
+        end: entry.end.as_ref(),
+        tags,
+        variants,
+        file: display_path(
+            file.path
+                .strip_prefix(&project.root)
+                .unwrap_or(file.path.as_path()),
+        ),
+    }
+}
+
+fn print_entries(entries: &[EntrySummary<'_>]) {
+    let id_width = entries
+        .iter()
+        .map(|entry| entry.id.chars().count())
+        .max()
+        .unwrap_or(0);
+    let kind_width = entries
+        .iter()
+        .map(|entry| entry.kind.id().chars().count())
+        .max()
+        .unwrap_or(0);
+    let title_width = entries
+        .iter()
+        .map(|entry| entry.title.chars().count())
+        .max()
+        .unwrap_or(0);
+    let organization_width = entries
+        .iter()
+        .map(|entry| entry.organization.unwrap_or("").chars().count())
+        .max()
+        .unwrap_or(0);
+
+    for entry in entries {
+        let tags = format!("[{}]", entry.tags.join(", "));
+        let organization = entry.organization.unwrap_or("");
+        let line = format!(
+            "{:<id_width$}  {:<kind_width$}  {:<title_width$}  {:<organization_width$}  {tags}",
+            entry.id,
+            entry.kind.id(),
+            entry.title,
+            organization,
+        );
+        println!("{}", line.trim_end());
+    }
+}
+
 fn validate(json: bool) -> Result<(), CliError> {
     let project = Project::load(Path::new(".")).map_err(CliError::from)?;
     let issues = project.validate();
@@ -354,9 +459,6 @@ fn print_success(command: &'static str, data: &Value) {
 
 #[derive(Debug)]
 pub enum CliError {
-    NotImplemented {
-        command: &'static str,
-    },
     InvalidData {
         issues: Vec<Issue>,
     },
@@ -378,7 +480,6 @@ impl CliError {
     /// human message.
     pub fn code(&self) -> &'static str {
         match self {
-            Self::NotImplemented { .. } => "not_implemented",
             Self::InvalidData { .. } => "invalid_data",
             Self::TargetNotFound { .. } => "target_not_found",
             Self::Io { .. } => "io_error",
@@ -388,7 +489,6 @@ impl CliError {
 
     pub fn exit_code(&self) -> u8 {
         match self {
-            Self::NotImplemented { .. } => EXIT_NOT_IMPLEMENTED,
             Self::InvalidData { .. } | Self::TargetNotFound { .. } => EXIT_INVALID_DATA,
             Self::Io { .. } => EXIT_IO,
             Self::Build { .. } => EXIT_BUILD,
@@ -414,9 +514,6 @@ impl CliError {
 impl fmt::Display for CliError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::NotImplemented { command } => {
-                write!(f, "{command} is not implemented yet")
-            }
             Self::InvalidData { issues } => {
                 writeln!(f, "invalid data ({} issue(s)):", issues.len())?;
                 for issue in issues {
