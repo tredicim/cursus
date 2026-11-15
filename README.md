@@ -9,9 +9,9 @@ experiences, projects, skills and education in one place, then pick exactly what
 goes into each CV, and which *framing* of it, for every application.
 
 **Status:** early, but the first pipeline works. Entries and targets are YAML,
-`cursus init` scaffolds a project, `cursus validate` checks it, and `cursus
-build` renders the `classic` template to LaTeX and PDF. `list`, the desktop app
-and the ATS checker are next. See [PLAN.md](PLAN.md).
+`cursus init` scaffolds a project, `cursus validate` checks it, `cursus list`
+discovers entries, and `cursus build` renders the `classic` template to LaTeX
+and PDF. The desktop app and the ATS checker are next. See [PLAN.md](PLAN.md).
 
 ## The problem
 
@@ -53,8 +53,7 @@ A Rust core shared by a desktop app (Tauri, TypeScript UI) and a CLI for scripti
 
 ## CLI
 
-`init`, `validate`, `build` and `schema` work. `list` still returns
-`not_implemented`.
+`init`, `validate`, `list`, `build` and `schema` all work.
 
 ```sh
 cargo run -p cursus-cli -- --help
@@ -64,11 +63,14 @@ cargo run -p cursus-cli -- init
 
 cd examples/valid
 cargo run -p cursus-cli -- validate
+cargo run -p cursus-cli -- list
+cargo run -p cursus-cli -- list --tag backend
 cargo run -p cursus-cli -- build acme-swe
 ```
 
 `init` creates a starter entry and target. It never overwrites existing files,
-so running it again only reports the paths it skipped.
+so running it again only reports the paths it skipped. `list` prints one entry
+per line sorted by ID; `--tag` keeps only entries with that exact tag.
 
 `build` writes `output/<target>.tex` and `output/<target>.pdf`; use
 `--output <directory>` or `--output <file>.pdf` to choose another location.
@@ -88,7 +90,7 @@ object:
 ```
 
 Exit codes: `0` success, `1` invalid data or unknown target, `2` usage error,
-`3` I/O error, `4` build failed, `5` not implemented.
+`3` I/O error, `4` build failed.
 
 ## Data and templates
 

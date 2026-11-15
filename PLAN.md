@@ -109,7 +109,7 @@ live. This keeps everything git-friendly and avoids a separate database.
 - **M0: Repo.** README, PLAN, license, CI skeleton.
 - **M1: Data.** Data model, YAML loading, `validate`, JSON Schema. **Done.**
 - **M2: Render.** One LaTeX template, `build` to `.tex`, then PDF. **Done.**
-- **M3: Targets.** Selection and variants, ordering, `list`.
+- **M3: Targets.** Selection and variants, ordering, `list`. **Done.**
 - **M4: App.** Tauri shell, library and target builder screens, PDF preview.
 - **M5: Agents.** `AGENTS.md`, `--json` everywhere, example workflow.
 - **M6: ATS.** PDF text extraction, structure checks, keyword coverage.

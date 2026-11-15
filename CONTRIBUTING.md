@@ -40,8 +40,8 @@ app can share the same logic.
 | `.github/` | CI workflows, issue forms and the pull request template. |
 | `PLAN.md` | Goals, milestones, open questions and risks. |
 
-`init`, `validate`, `build` and `schema` work. `list` is still a stub; keep
-changes aligned with the milestones in `PLAN.md`.
+`init`, `validate`, `list`, `build` and `schema` work. Keep changes aligned with
+the milestones in `PLAN.md`.
 
 ## Prerequisites
 

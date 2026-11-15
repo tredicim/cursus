@@ -98,6 +98,19 @@ pub enum EntryKind {
 }
 
 impl EntryKind {
+    /// Stable identifier used in YAML and the CLI, e.g. `experience`.
+    pub fn id(self) -> &'static str {
+        match self {
+            Self::Experience => "experience",
+            Self::Project => "project",
+            Self::Education => "education",
+            Self::Skill => "skill",
+            Self::Award => "award",
+            Self::Certification => "certification",
+            Self::Other => "other",
+        }
+    }
+
     /// Human-readable section heading used by templates.
     pub fn label(self) -> &'static str {
         match self {
