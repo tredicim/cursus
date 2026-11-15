@@ -32,7 +32,7 @@ app can share the same logic.
 | `crates/core` | Data model, YAML loading, validation, target resolution. |
 | `crates/render` | LaTeX rendering, escaping and the PDF build pipeline. |
 | `crates/cli` | The `cursus` binary; integration tests live in `crates/cli/tests/`. |
-| `data/` | Your entries. Created by `cursus init` (still planned). |
+| `data/` | Your entries. Created by `cursus init`. |
 | `targets/` | One file per CV target. |
 | `examples/` | A complete example project and one fixture per validation rule. |
 | `docs/` | Data model, build pipeline and template notes. |
@@ -40,7 +40,7 @@ app can share the same logic.
 | `.github/` | CI workflows, issue forms and the pull request template. |
 | `PLAN.md` | Goals, milestones, open questions and risks. |
 
-`validate`, `build` and `schema` work. `init` and `list` are still stubs; keep
+`init`, `validate`, `build` and `schema` work. `list` is still a stub; keep
 changes aligned with the milestones in `PLAN.md`.
 
 ## Prerequisites

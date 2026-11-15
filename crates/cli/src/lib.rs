@@ -6,7 +6,8 @@
 
 use std::fmt;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::io::{ErrorKind, Write};
+use std::path::{Component, Path, PathBuf};
 
 use clap::{Parser, Subcommand};
 use cursus_core::{Issue, LoadError, Project, json_schema};
@@ -84,7 +85,7 @@ pub fn run(cli: Cli) -> Result<(), CliError> {
     let Cli { json, command } = cli;
 
     match command {
-        Command::Init => Err(CliError::NotImplemented { command: "init" }),
+        Command::Init => init(json),
         Command::List { .. } => Err(CliError::NotImplemented { command: "list" }),
         Command::Build {
             target,
@@ -101,6 +102,124 @@ pub fn run(cli: Cli) -> Result<(), CliError> {
             Ok(())
         }
     }
+}
+
+/// A minimal entry for a new project. The values are valid on purpose so
+/// `cursus validate` succeeds immediately after `init`.
+const STARTER_ENTRY: &str = "\
+# Replace the placeholder values with your own experience, then run
+# `cursus validate`.
+id: first-entry
+kind: experience
+title: Your role
+organization: Your organization
+start: 2024-01
+tags: [example]
+variants:
+  default:
+    summary: Describe what you did and the impact you had.
+";
+
+/// A minimal target that includes the starter entry.
+const STARTER_TARGET: &str = "\
+# Replace the placeholder values and include the entries for this CV.
+name: My CV
+template: classic
+include:
+  - id: first-entry
+    variant: default
+";
+
+fn init(json: bool) -> Result<(), CliError> {
+    let root = Path::new(".");
+    let data_dir = root.join("data");
+    let experience_dir = data_dir.join("experience");
+    let targets_dir = root.join("targets");
+    let entry_path = experience_dir.join("first-entry.yaml");
+    let target_path = targets_dir.join("my-cv.yaml");
+
+    let mut created = Vec::new();
+    let mut skipped = Vec::new();
+
+    for directory in [&data_dir, &experience_dir, &targets_dir] {
+        if directory.is_dir() {
+            skipped.push(format!("{}/", display_path(directory)));
+            continue;
+        }
+
+        fs::create_dir_all(directory).map_err(|source| CliError::Io {
+            action: "create directory",
+            path: directory.clone(),
+            source,
+        })?;
+        created.push(format!("{}/", display_path(directory)));
+    }
+
+    for (path, contents) in [(&entry_path, STARTER_ENTRY), (&target_path, STARTER_TARGET)] {
+        let mut file = match fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(path)
+        {
+            Ok(file) => file,
+            Err(source) if source.kind() == ErrorKind::AlreadyExists => {
+                skipped.push(display_path(path));
+                continue;
+            }
+            Err(source) => {
+                return Err(CliError::Io {
+                    action: "create",
+                    path: path.clone(),
+                    source,
+                });
+            }
+        };
+
+        file.write_all(contents.as_bytes())
+            .map_err(|source| CliError::Io {
+                action: "write",
+                path: path.clone(),
+                source,
+            })?;
+        created.push(display_path(path));
+    }
+
+    if json {
+        print_success(
+            "init",
+            &json!({
+                "root": ".",
+                "created": created,
+                "skipped": skipped,
+            }),
+        );
+    } else {
+        for path in &created {
+            println!("created {path}");
+        }
+        for path in &skipped {
+            println!("skipped {path} (already exists)");
+        }
+        println!(
+            "initialized .: {} created, {} skipped",
+            created.len(),
+            skipped.len()
+        );
+    }
+
+    Ok(())
+}
+
+/// Path relative to the project root, with `/` separators so the output does
+/// not depend on the platform.
+fn display_path(path: &Path) -> String {
+    path.components()
+        .filter_map(|component| match component {
+            Component::Normal(part) => Some(part.to_string_lossy()),
+            _ => None,
+        })
+        .collect::<Vec<_>>()
+        .join("/")
 }
 
 fn validate(json: bool) -> Result<(), CliError> {
