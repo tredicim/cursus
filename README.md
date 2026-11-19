@@ -79,18 +79,8 @@ It needs Tectonic, `latexmk` or `pdflatex` on `PATH`; see
 file, with no TeX installation required.
 
 Every command accepts `--json`; machine-readable output goes to stdout as one
-object:
-
-```json
-{"ok":true,"command":"validate","data":{"entries":5,"targets":1}}
-```
-
-```json
-{"ok":false,"command":"build","error":{"code":"target_not_found","message":"target `nope` not found in targets/"}}
-```
-
-Exit codes: `0` success, `1` invalid data or unknown target, `2` usage error,
-`3` I/O error, `4` build failed.
+object. See the [CLI contract](docs/cli.md) for envelope shapes, error codes,
+exit codes and command examples.
 
 ## Data and templates
 

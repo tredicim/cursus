@@ -3,6 +3,9 @@
 `cursus build <target>` renders a target to LaTeX, writes the `.tex` file, then
 compiles it to PDF. Pass `--tex-only` to stop after the first step.
 
+See the [CLI contract](cli.md) for the stable JSON envelope, error codes and
+exit codes.
+
 ```sh
 cd examples/valid
 cargo run -p cursus-cli -- build acme-swe
@@ -134,13 +137,9 @@ of every standard distribution and the default Tectonic bundle.
 
 ## Failures
 
-- Exit code `4` (`build_failed`) means the compiler was missing, `CURSUS_LATEX`
-  was invalid or named an engine that is not installed, or LaTeX failed. The
-  error includes the tail of the compiler output when a compiler ran.
-- Exit code `1` (`invalid_data` or `target_not_found`) means the project did not
-  validate, or the target name does not exist. Nothing is written in that case.
-- Exit code `3` (`io_error`) means a file or directory could not be read or
-  written.
+Build-specific failure behavior is covered by the stable [CLI contract](cli.md)
+and the compiler details above. Nothing is written when validation fails or
+the target name does not exist.
 
 The `.tex` file is written before compilation, so if LaTeX fails you can inspect
 the exact source and run the compiler by hand:
