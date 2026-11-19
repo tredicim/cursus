@@ -122,41 +122,16 @@ checks:
    once.
 
 Every issue carries the file, the field path (`include[0].variant`,
-`variants.default.bullets[2]`) and a reason. Human output goes to stderr with
-exit code `1`; `--json` puts the same issues under
-`error.details.issues`:
-
-```json
-{
-  "ok": false,
-  "command": "validate",
-  "error": {
-    "code": "invalid_data",
-    "message": "invalid data (1 issue(s)):\n  ...",
-    "details": {
-      "issues": [
-        {
-          "file": "targets/acme-swe.yaml",
-          "field": "include[0].variant",
-          "message": "entry `acme-internship` has no variant `backend` (available: software-eng)"
-        }
-      ]
-    }
-  }
-}
-```
-
-On success the exit code is `0` and `--json` reports counts:
-
-```json
-{"ok":true,"command":"validate","data":{"entries":5,"targets":1}}
-```
+`variants.default.bullets[2]`) and a reason. See the [CLI
+contract](cli.md) for human and JSON output, including the
+`error.details.issues` shape and the command's exit code.
 
 ## JSON Schema
 
 `schema.json` is generated from the Rust types and committed at the repository
-root. `cursus schema` prints the same document to stdout, with or without
-`--json`, so an editor or agent can save it directly:
+root. The [CLI contract](cli.md#schema) documents the `cursus schema` output;
+the command prints the same document to stdout, with or without `--json`, so an
+editor or agent can save it directly:
 
 ```sh
 cargo run -p cursus-cli -- schema > schema.json
